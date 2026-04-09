@@ -1,1 +1,391 @@
-# gongora
+**<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Góngora 3D — WebXR Immersive</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:Georgia,serif;color:#e2e8f0}
+canvas{display:block}
+#hud{position:fixed;top:16px;left:16px;z-index:10;pointer-events:none}
+#hud h1{font-size:18px;color:#f97316;text-shadow:0 0 12px #f9731688}
+#hud .sub{font-size:11px;color:#94a3b8;line-height:1.5;margin-top:4px}
+#tooltip{position:fixed;z-index:20;display:none;background:#1e293bee;border:1px solid #f97316;
+  border-radius:8px;padding:10px 14px;font-size:12px;pointer-events:none;max-width:320px;
+  box-shadow:0 4px 24px #00000088;backdrop-filter:blur(8px)}
+#tooltip .num{color:#f97316;font-weight:700;font-size:14px}
+#tooltip .inc{color:#cbd5e1;font-style:italic;margin:4px 0}
+.v-comp{color:#4ade80}.v-atip{color:#fb923c}.v-muy{color:#f87171}
+#legend{position:fixed;top:16px;right:16px;z-index:10;font-size:11px}
+#legend div{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+#legend .dot{width:10px;height:10px;border-radius:50%}
+#vr-info{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:5;
+  color:#475569;font-size:11px;text-align:center;pointer-events:none}
+</style>
+</head><body>
+<div id="hud">
+  <h1>Góngora 3D — WebXR</h1>
+  <div class="sub" id="info"></div>
+</div>
+<div id="tooltip"></div>
+<div id="legend"></div>
+<div id="vr-info">En Quest: pulsa "Enter VR" · Apunta con el mando para inspeccionar sonetos</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const DATA = {"sonnets":[{"n":51,"tag":"A","ne":14,"inc":"Tres veces de Aquilón el soplo airado","x":-7.6421,"y":-0.6275,"z":1.0149,"d":4.93,"v":"COMPATIBLE","autor":""},{"n":162,"tag":"A","ne":14,"inc":"Clarísimo Marqués, dos veces claro","x":1.7167,"y":-0.9985,"z":-0.0268,"d":5.27,"v":"COMPATIBLE","autor":""},{"n":201,"tag":"A","ne":14,"inc":"Música le pidió ayer su albedrío","x":-1.4949,"y":1.6123,"z":0.8078,"d":4.33,"v":"COMPATIBLE","autor":""},{"n":17,"tag":"A","ne":14,"inc":"Raya, dorado Sol, orna y colora","x":-5.3382,"y":-1.5857,"z":2.5249,"d":4.2,"v":"COMPATIBLE","autor":""},{"n":144,"tag":"A","ne":14,"inc":"La plaza, un jardín fresco; los tablados,","x":2.8068,"y":3.198,"z":1.2447,"d":4.4,"v":"COMPATIBLE","autor":""},{"n":16,"tag":"A","ne":14,"inc":"¡Oh claro honor del líquido elemento,","x":-2.372,"y":-0.2625,"z":0.1578,"d":5.59,"v":"COMPATIBLE","autor":""},{"n":196,"tag":"A","ne":14,"inc":"En el cristal de tu divina mano","x":0.9904,"y":-3.1178,"z":1.7209,"d":4.85,"v":"COMPATIBLE","autor":""},{"n":137,"tag":"A","ne":14,"inc":"Hermosas damas si la pasión ciega","x":1.5156,"y":-3.6343,"z":2.8888,"d":6.79,"v":"ATÍPICO","autor":""},{"n":195,"tag":"A","ne":14,"inc":"Oh marinero, tú que, cortesano,","x":-1.419,"y":-0.1729,"z":1.5762,"d":4.71,"v":"COMPATIBLE","autor":""},{"n":15,"tag":"A","ne":14,"inc":"Al tramontar del sol, la ninfa mía,","x":-2.508,"y":1.1412,"z":-0.8677,"d":5.05,"v":"COMPATIBLE","autor":""},{"n":42,"tag":"A","ne":14,"inc":"No destrozada nave en roca dura","x":-0.2178,"y":-0.4389,"z":2.4372,"d":5.06,"v":"COMPATIBLE","autor":""},{"n":18,"tag":"A","ne":14,"inc":"Cual parece al romper de la mañana","x":-0.2756,"y":-0.2427,"z":0.19,"d":4.11,"v":"COMPATIBLE","autor":""},{"n":19,"tag":"A","ne":14,"inc":"Suspiros tristes, lágrimas cansadas,","x":-1.7118,"y":0.3855,"z":0.9694,"d":5.05,"v":"COMPATIBLE","autor":""},{"n":24,"tag":"A","ne":14,"inc":"Mientras por competir con tu cabello,","x":1.1584,"y":-3.9076,"z":-1.1108,"d":5.62,"v":"COMPATIBLE","autor":""},{"n":32,"tag":"A","ne":14,"inc":"Ni en este monte, este aire, ni este río","x":-0.8671,"y":-0.7755,"z":-1.0083,"d":4.99,"v":"COMPATIBLE","autor":""},{"n":41,"tag":"A","ne":14,"inc":"La dulce boca que a gustar convida","x":-1.2366,"y":-0.3607,"z":0.612,"d":5.27,"v":"COMPATIBLE","autor":""},{"n":50,"tag":"A","ne":14,"inc":"¡Oh excelso muro, oh torres coronadas","x":-1.5611,"y":1.2994,"z":-3.3612,"d":7.32,"v":"MUY ATÍPICO","autor":""},{"n":116,"tag":"A","ne":14,"inc":"Pender de un leño, traspasado el pecho","x":-2.3291,"y":-1.8186,"z":-2.1407,"d":5.34,"v":"COMPATIBLE","autor":""},{"n":127,"tag":"A","ne":14,"inc":"Verdes juncos del Duero a mi pastora","x":1.1364,"y":-0.3691,"z":-1.6948,"d":5.1,"v":"COMPATIBLE","autor":""},{"n":138,"tag":"A","ne":14,"inc":"Si Amor entre las plumas de su nido","x":-1.8128,"y":1.4982,"z":0.0073,"d":4.86,"v":"COMPATIBLE","autor":""},{"n":155,"tag":"A","ne":14,"inc":"Montaña inaccesible, opuesta en vano","x":-3.3741,"y":0.8729,"z":1.2984,"d":5.08,"v":"COMPATIBLE","autor":""},{"n":76,"tag":"A","ne":14,"inc":"Sacros, altos, dorados capiteles,","x":1.0965,"y":0.3874,"z":0.4499,"d":4.84,"v":"COMPATIBLE","autor":""},{"n":180,"tag":"A","ne":14,"inc":"Mientras Corinto, en lágrimas deshecho,","x":-0.8615,"y":-1.5111,"z":-2.0976,"d":5.25,"v":"COMPATIBLE","autor":""},{"n":13,"tag":"A","ne":14,"inc":"De pura honestidad templo sagrado,","x":-3.8433,"y":-1.8601,"z":3.5432,"d":4.74,"v":"COMPATIBLE","autor":""},{"n":40,"tag":"A","ne":14,"inc":"Con diferencia tal, con gracia tanta","x":0.5595,"y":4.3141,"z":-1.2028,"d":5.44,"v":"COMPATIBLE","autor":""},{"n":20,"tag":"A","ne":14,"inc":"Ya besando unas manos cristalinas,","x":0.4667,"y":-3.2131,"z":-0.9614,"d":6.07,"v":"COMPATIBLE","autor":""},{"n":45,"tag":"A","ne":14,"inc":"Gallardas plantas que con voz doliente","x":-0.6193,"y":-2.0119,"z":-1.2128,"d":6.27,"v":"COMPATIBLE","autor":""},{"n":182,"tag":"A","ne":14,"inc":"-¿De dónde bueno, Juan, con pedorreras?","x":1.1828,"y":-1.178,"z":1.1089,"d":5.81,"v":"COMPATIBLE","autor":""},{"n":69,"tag":"A","ne":14,"inc":"Grandes, más que elefantes y que abadas,","x":0.0883,"y":-0.4858,"z":2.3822,"d":5.6,"v":"COMPATIBLE","autor":""},{"n":193,"tag":"A","ne":14,"inc":"Este a Pomona, cuando ya no sea","x":-0.0606,"y":0.4762,"z":0.3274,"d":5.21,"v":"COMPATIBLE","autor":""},{"n":197,"tag":"A","ne":14,"inc":"Los blancos lilios que de ciento en ciento,","x":-3.1297,"y":-1.3698,"z":1.1618,"d":5.51,"v":"COMPATIBLE","autor":""},{"n":71,"tag":"A","ne":14,"inc":"Duélete de esa puente, Manzanares,","x":-2.3332,"y":-2.8777,"z":-1.0614,"d":5.26,"v":"COMPATIBLE","autor":""},{"n":93,"tag":"A","ne":14,"inc":"Árbol de cuyos ramos fortunados,","x":3.4667,"y":5.128,"z":1.3139,"d":4.96,"v":"COMPATIBLE","autor":""},{"n":135,"tag":"A","ne":14,"inc":"Lilio siempre real, nací en Medina,","x":-1.6192,"y":-1.3036,"z":-1.203,"d":4.67,"v":"COMPATIBLE","autor":""},{"n":112,"tag":"A","ne":14,"inc":"Este monte, de cruces coronado,","x":-2.1347,"y":-0.0825,"z":0.6931,"d":4.85,"v":"COMPATIBLE","autor":""},{"n":68,"tag":"A","ne":14,"inc":"Por niñear un picarillo tierno,","x":-0.0096,"y":-3.2153,"z":-3.2459,"d":5.89,"v":"COMPATIBLE","autor":""},{"n":134,"tag":"A","ne":14,"inc":"¡Ayer deidad humana, hoy poca tierra;","x":2.1634,"y":-2.3393,"z":-4.0148,"d":6.34,"v":"COMPATIBLE","autor":""},{"n":44,"tag":"A","ne":14,"inc":"No enfrene tu gallardo pensamiento","x":-4.0525,"y":3.3632,"z":-0.3647,"d":4.53,"v":"COMPATIBLE","autor":""},{"n":285,"tag":"B","ne":14,"inc":"Un culto Risco en venas hoy süaves","x":1.9509,"y":-0.2983,"z":-1.8771,"d":5.3,"v":"COMPATIBLE","autor":""},{"n":287,"tag":"B","ne":14,"inc":"No entre las flores, no, señor don Diego,","x":-4.3532,"y":-0.554,"z":-0.6484,"d":3.99,"v":"COMPATIBLE","autor":""},{"n":221,"tag":"B","ne":14,"inc":"Señores corteggiantes, ¿quién sus días","x":-1.922,"y":0.7548,"z":1.2768,"d":5.7,"v":"COMPATIBLE","autor":""},{"n":234,"tag":"B","ne":14,"inc":"El conde, mi señor, se fue a Nápoles;","x":1.1477,"y":0.5267,"z":-0.3602,"d":4.29,"v":"COMPATIBLE","autor":""},{"n":336,"tag":"B","ne":14,"inc":"Prisión del nácar era articulado","x":1.3298,"y":-0.6581,"z":2.1568,"d":5.08,"v":"COMPATIBLE","autor":""},{"n":355,"tag":"B","ne":14,"inc":"Las que a otros negó piedras Oriente,","x":1.7837,"y":-0.81,"z":-0.5014,"d":4.63,"v":"COMPATIBLE","autor":""},{"n":392,"tag":"B","ne":14,"inc":"Camina mi pensión con pie de plomo,","x":-3.0228,"y":0.981,"z":0.7262,"d":5.04,"v":"COMPATIBLE","autor":""},{"n":361,"tag":"B","ne":14,"inc":"Al tronco Filis de un laurel sagrado","x":-1.2742,"y":1.8426,"z":-0.0437,"d":4.2,"v":"COMPATIBLE","autor":""},{"n":374,"tag":"B","ne":14,"inc":"El Conde mi señor se va a Nápoles","x":-1.1286,"y":4.2833,"z":0.2049,"d":5.78,"v":"COMPATIBLE","autor":""},{"n":219,"tag":"B","ne":14,"inc":"Pálida restituye a su elemento","x":-2.9079,"y":-2.2707,"z":-1.8508,"d":5.49,"v":"COMPATIBLE","autor":""},{"n":253,"tag":"B","ne":14,"inc":"Poco después, que su cristal dilata","x":2.1506,"y":-0.6937,"z":1.6614,"d":6.11,"v":"COMPATIBLE","autor":""},{"n":237,"tag":"B","ne":14,"inc":"No de fino diamante, o rubí ardiente,","x":0.6533,"y":-1.0978,"z":-0.0797,"d":5.05,"v":"COMPATIBLE","autor":""},{"n":218,"tag":"B","ne":14,"inc":"El cuarto Enrico yace mal herido,","x":-2.4497,"y":-1.0506,"z":-1.0598,"d":5.88,"v":"COMPATIBLE","autor":""},{"n":267,"tag":"B","ne":14,"inc":"Segundas plumas son ¡oh lector! cuantas","x":1.104,"y":-2.5506,"z":-0.569,"d":5.71,"v":"COMPATIBLE","autor":""},{"n":358,"tag":"B","ne":14,"inc":"Sella el tronco sangriento, no le oprime","x":-4.0586,"y":2.0691,"z":-0.1841,"d":4.55,"v":"COMPATIBLE","autor":""},{"n":900,"tag":"S","ne":14,"inc":"De vuestras ramas no la heroica lira","x":-4.585,"y":-0.3066,"z":-1.3512,"d":5.15,"v":"COMPATIBLE","autor":""},{"n":901,"tag":"S","ne":14,"inc":"De chinches y de mulas voy comido;","x":-3.2257,"y":-1.2026,"z":-0.2567,"d":6.0,"v":"COMPATIBLE","autor":""},{"n":902,"tag":"S","ne":14,"inc":"Soror don Juan, ¿ayer silicio y jerga,","x":1.9788,"y":-0.3785,"z":-2.0677,"d":5.94,"v":"COMPATIBLE","autor":""},{"n":903,"tag":"S","ne":14,"inc":"De humildes padres hija, en pobres paños","x":-0.0761,"y":1.6944,"z":0.1419,"d":5.02,"v":"COMPATIBLE","autor":""},{"n":904,"tag":"S","ne":14,"inc":"¿Las no piadosas martas ya te pones,","x":0.4898,"y":-0.7612,"z":1.116,"d":4.89,"v":"COMPATIBLE","autor":""},{"n":905,"tag":"S","ne":14,"inc":"Hay entre Carrión y Tordesillas,","x":1.325,"y":1.8598,"z":-1.3244,"d":4.04,"v":"COMPATIBLE","autor":""},{"n":906,"tag":"S","ne":14,"inc":"Comer salchichas y hallar sin gota","x":-3.0657,"y":0.2503,"z":1.0831,"d":6.04,"v":"COMPATIBLE","autor":""},{"n":907,"tag":"S","ne":14,"inc":"Esta forma elegante, oh peregrino,","x":2.4292,"y":-0.0325,"z":0.3614,"d":5.72,"v":"COMPATIBLE","autor":""},{"n":908,"tag":"S","ne":14,"inc":"Rey de los otros ríos caudaloso,","x":0.5711,"y":-0.9316,"z":1.3129,"d":4.87,"v":"COMPATIBLE","autor":""},{"n":909,"tag":"S","ne":14,"inc":"Con razón, gloria excelsa de Velada,","x":-2.4061,"y":0.4107,"z":0.4246,"d":5.35,"v":"COMPATIBLE","autor":""},{"n":910,"tag":"S","ne":14,"inc":"Llegué a Valladolid; registré luego","x":-0.3056,"y":0.0327,"z":0.9299,"d":5.52,"v":"COMPATIBLE","autor":""},{"n":911,"tag":"S","ne":14,"inc":"En la capilla estoy y condenado","x":2.2247,"y":-2.8956,"z":1.6767,"d":5.63,"v":"COMPATIBLE","autor":""},{"n":912,"tag":"S","ne":14,"inc":"Hermoso dueño de la vida mía,","x":0.7061,"y":-3.7208,"z":2.4032,"d":4.02,"v":"COMPATIBLE","autor":""},{"n":913,"tag":"S","ne":14,"inc":"Esta en forma elegante, o peregrino,","x":1.5857,"y":0.1414,"z":0.2985,"d":5.97,"v":"COMPATIBLE","autor":""},{"n":914,"tag":"S","ne":14,"inc":"Mariposa, no sólo no cobarde,","x":-0.7506,"y":-4.8322,"z":0.5029,"d":5.96,"v":"COMPATIBLE","autor":""},{"n":915,"tag":"S","ne":14,"inc":"Si ociosa no asistió naturaleza,","x":3.3063,"y":-1.7586,"z":-1.5002,"d":5.24,"v":"COMPATIBLE","autor":""},{"n":916,"tag":"S","ne":14,"inc":"En tenebrosa noche, en mar airado,","x":-4.7962,"y":-1.7026,"z":-0.1031,"d":5.21,"v":"COMPATIBLE","autor":""},{"n":917,"tag":"S","ne":14,"inc":"Al sol peinaba Clori sus cabellos","x":-3.8135,"y":2.777,"z":-1.0463,"d":4.37,"v":"COMPATIBLE","autor":""},{"n":918,"tag":"S","ne":14,"inc":"Yacen aquí los hueso sepultados","x":1.8645,"y":0.706,"z":2.4862,"d":5.22,"v":"COMPATIBLE","autor":""},{"n":919,"tag":"S","ne":14,"inc":"Menos solícito veloz saeta","x":0.7931,"y":-1.1707,"z":1.147,"d":4.81,"v":"COMPATIBLE","autor":""},{"n":920,"tag":"S","ne":14,"inc":"¡Oh niebla del estado más sereno,","x":-1.77,"y":1.6315,"z":-3.2317,"d":7.19,"v":"ATÍPICO","autor":""},{"n":921,"tag":"S","ne":14,"inc":"Ayer naciste y morirás mañana;","x":-0.4988,"y":-0.7644,"z":-0.455,"d":5.71,"v":"COMPATIBLE","autor":""},{"n":922,"tag":"S","ne":14,"inc":"-Rebelde y pertinaz entendimiento,","x":-1.1436,"y":2.1053,"z":-1.0914,"d":6.17,"v":"COMPATIBLE","autor":""},{"n":923,"tag":"S","ne":14,"inc":"Bien dispuesta madera en nueva traza,","x":1.288,"y":-0.9674,"z":-0.4521,"d":4.69,"v":"COMPATIBLE","autor":""},{"n":924,"tag":"S","ne":15,"inc":"Dulce arroyuelo de la nieve fría","x":-1.9288,"y":2.7688,"z":2.9893,"d":7.24,"v":"ATÍPICO","autor":""},{"n":925,"tag":"S","ne":16,"inc":"Embutiste Lopillo, a Sabaot","x":2.861,"y":3.9337,"z":2.6897,"d":6.64,"v":"COMPATIBLE","autor":""},{"n":926,"tag":"S","ne":14,"inc":"Tonante monseñor, ¿de cuándo acá","x":1.4992,"y":1.706,"z":-2.0516,"d":6.57,"v":"COMPATIBLE","autor":""},{"n":927,"tag":"S","ne":14,"inc":"Valladolid, de lágrimas sois valle,","x":0.8805,"y":-1.699,"z":-0.4108,"d":5.29,"v":"COMPATIBLE","autor":""},{"n":928,"tag":"S","ne":14,"inc":"Es el Orfeo del señor don Juan","x":1.6368,"y":-1.504,"z":0.2191,"d":5.6,"v":"COMPATIBLE","autor":""},{"n":929,"tag":"S","ne":14,"inc":"Generoso esplendor, sino luciente","x":-0.8165,"y":1.6844,"z":1.1835,"d":3.88,"v":"COMPATIBLE","autor":""},{"n":930,"tag":"S","ne":14,"inc":"En justa, injusta expuesto a la sentencia","x":3.4773,"y":4.5991,"z":-0.8555,"d":6.03,"v":"COMPATIBLE","autor":""},{"n":931,"tag":"S","ne":14,"inc":"Sin esperar la lucha picaril","x":6.8089,"y":0.793,"z":2.6875,"d":5.91,"v":"COMPATIBLE","autor":""},{"n":932,"tag":"S","ne":14,"inc":"¿Para qué dime Marcia, te perfumas,","x":2.1072,"y":4.8867,"z":2.0441,"d":5.17,"v":"COMPATIBLE","autor":""},{"n":933,"tag":"S","ne":14,"inc":"Un Valentón de espátula, y gregesco,","x":4.0486,"y":3.1392,"z":-1.1891,"d":5.1,"v":"COMPATIBLE","autor":""},{"n":934,"tag":"S","ne":14,"inc":"«Aquí del Conde Claros», dijo, y luego,","x":-0.0338,"y":-2.3872,"z":-1.2392,"d":5.0,"v":"COMPATIBLE","autor":""},{"n":935,"tag":"S","ne":14,"inc":"Este, que en la fortuna más subida","x":0.8034,"y":2.1398,"z":1.4693,"d":5.44,"v":"COMPATIBLE","autor":""},{"n":936,"tag":"S","ne":14,"inc":"Cosas, Celalva mía, he visto extrañas,","x":0.1393,"y":-0.2052,"z":1.2887,"d":4.55,"v":"COMPATIBLE","autor":""},{"n":937,"tag":"S","ne":14,"inc":"Celos de quien bien ama, amargo freno,","x":-0.4383,"y":0.933,"z":-2.4359,"d":6.39,"v":"COMPATIBLE","autor":""},{"n":938,"tag":"S","ne":14,"inc":"Este, que Babia al mundo hoy ha ofrecido","x":2.7907,"y":-1.1019,"z":-0.7717,"d":5.82,"v":"COMPATIBLE","autor":""},{"n":939,"tag":"S","ne":14,"inc":"Patos del aguachirle castellana","x":-1.7061,"y":-0.618,"z":0.4586,"d":5.07,"v":"COMPATIBLE","autor":""},{"n":940,"tag":"S","ne":14,"inc":"Si ya el griego orador la edad presente,","x":-1.5575,"y":-1.1307,"z":-1.4557,"d":4.99,"v":"COMPATIBLE","autor":""},{"n":941,"tag":"S","ne":14,"inc":"Vive en este volumen el que yace","x":4.2252,"y":-1.4048,"z":-3.3414,"d":6.65,"v":"ATÍPICO","autor":""},{"n":942,"tag":"S","ne":14,"inc":"Pisó las calles de Madrid el fiero","x":1.8578,"y":0.7946,"z":2.2619,"d":4.76,"v":"COMPATIBLE","autor":""},{"n":943,"tag":"S","ne":14,"inc":"Restituye a tu mundo horror divino,","x":-2.8338,"y":0.4257,"z":0.7027,"d":4.0,"v":"COMPATIBLE","autor":""},{"n":944,"tag":"S","ne":14,"inc":"En vez de las Helíades, ahora","x":3.9629,"y":1.8014,"z":-0.7926,"d":4.97,"v":"COMPATIBLE","autor":""},{"n":945,"tag":"S","ne":14,"inc":"Después que Apolo, tus coplones vido","x":-0.6761,"y":-3.807,"z":-0.72,"d":5.28,"v":"COMPATIBLE","autor":""},{"n":946,"tag":"S","ne":14,"inc":"«Aquí del Conde Claros», dijo, y luego","x":-0.7373,"y":-1.6198,"z":-0.8612,"d":5.28,"v":"COMPATIBLE","autor":""},{"n":947,"tag":"S","ne":14,"inc":"Sabe el cielo, Valdés, si me ha pesado","x":0.8828,"y":-1.2015,"z":0.7113,"d":4.36,"v":"COMPATIBLE","autor":""},{"n":948,"tag":"S","ne":14,"inc":"Deja las damas, cuyo flaco yerro","x":0.8772,"y":-2.7323,"z":0.4617,"d":4.15,"v":"COMPATIBLE","autor":""},{"n":949,"tag":"S","ne":14,"inc":"Orfeo, el que bajó de Andalucía,","x":-1.94,"y":4.1442,"z":-0.8067,"d":5.29,"v":"COMPATIBLE","autor":""},{"n":458,"tag":"D","ne":14,"inc":"No sois, aunque en edad de cuatro sietes,","x":3.1677,"y":1.333,"z":-0.6252,"d":5.25,"v":"COMPATIBLE","autor":""},{"n":456,"tag":"D","ne":14,"inc":"Antes que alguna caja luterana","x":3.251,"y":-0.5735,"z":0.219,"d":5.45,"v":"COMPATIBLE","autor":""},{"n":442,"tag":"D","ne":14,"inc":"Anacreonte español, no hay quien os tope,","x":2.0523,"y":0.9578,"z":-3.1301,"d":6.74,"v":"ATÍPICO","autor":""},{"n":420,"tag":"D","ne":14,"inc":"Cisne gentil, después que crespo el vado","x":-2.6611,"y":4.8794,"z":-0.092,"d":6.14,"v":"COMPATIBLE","autor":""},{"n":428,"tag":"D","ne":14,"inc":"Por tu vida, Lopillo, que me borres","x":1.317,"y":-0.5799,"z":-1.1064,"d":5.18,"v":"COMPATIBLE","autor":""},{"n":433,"tag":"D","ne":14,"inc":"Yace debajo de esta piedra fría","x":3.6639,"y":0.9899,"z":0.194,"d":4.66,"v":"COMPATIBLE","autor":""},{"n":449,"tag":"D","ne":14,"inc":"Con poca luz y menos disciplina","x":-1.2919,"y":4.0833,"z":-0.6897,"d":7.2,"v":"ATÍPICO","autor":""},{"n":421,"tag":"D","ne":14,"inc":"Generoso don Juan, sobre quien llueve","x":-1.2011,"y":-0.3709,"z":0.3561,"d":4.71,"v":"COMPATIBLE","autor":""},{"n":427,"tag":"D","ne":14,"inc":"Señor, aquel Dragón de inglés veneno,","x":-1.4305,"y":0.2364,"z":0.3447,"d":5.23,"v":"COMPATIBLE","autor":""},{"n":440,"tag":"D","ne":14,"inc":"Vimo, señora Lopa, su Epopeya,","x":4.2206,"y":1.2704,"z":0.4088,"d":7.01,"v":"ATÍPICO","autor":""},{"n":460,"tag":"D","ne":14,"inc":"Cierto poeta, en forma peregrina","x":-2.2326,"y":2.2151,"z":1.2489,"d":5.26,"v":"COMPATIBLE","autor":""},{"n":462,"tag":"D","ne":14,"inc":"Doce sermones estampó Florencia,","x":3.6226,"y":2.2405,"z":-0.7018,"d":6.67,"v":"ATÍPICO","autor":""},{"n":439,"tag":"D","ne":14,"inc":"Pálido sol en cielo encapotado,","x":3.1392,"y":-5.2264,"z":5.2113,"d":11.08,"v":"MUY ATÍPICO","autor":""},{"n":9001,"tag":"X","ne":14,"inc":"Cerrar podrá mis ojos la postrera","x":-0.8708,"y":-2.6465,"z":-0.6966,"d":6.05,"v":"COMPATIBLE","autor":"Quevedo"},{"n":9002,"tag":"X","ne":13,"inc":"Un soneto me manda hacer Violante,","x":-0.6486,"y":0.0877,"z":-1.8145,"d":4.93,"v":"COMPATIBLE","autor":"Lope"},{"n":9003,"tag":"X","ne":5,"inc":"¿Y dejas, Pastor santo,","x":3.111,"y":2.6246,"z":2.3562,"d":14.67,"v":"MUY ATÍPICO","autor":"FrayLuis"},{"n":9004,"tag":"X","ne":12,"inc":"En tanto que de rosa y de azucena","x":-2.5598,"y":3.3851,"z":-1.7343,"d":7.73,"v":"MUY ATÍPICO","autor":"Garcilaso"},{"n":9005,"tag":"X","ne":9,"inc":"Ojos claros, serenos,","x":5.0897,"y":-0.8797,"z":-4.8521,"d":16.12,"v":"MUY ATÍPICO","autor":"Cetina"},{"n":9006,"tag":"X","ne":12,"inc":"Desmayarse, atreverse, estar furioso,","x":1.8303,"y":-1.2552,"z":-1.4601,"d":7.73,"v":"MUY ATÍPICO","autor":"Lope2"},{"n":9007,"tag":"X","ne":14,"inc":"Detente, sombra de mi bien esquivo,","x":5.5869,"y":-1.6825,"z":1.6146,"d":5.96,"v":"COMPATIBLE","autor":"SorJuana"}],"p95":6.64,"p99":7.24,"ve":43.6,"ve1":20.2,"ve2":14.7,"ve3":8.7};
+
+const COLORS = {A:0xc084fc, B:0x60a5fa, S:0x22d3ee, D:0xf97316, X:0xf87171};
+const COLOR_HEX = {A:'#c084fc', B:'#60a5fa', S:'#22d3ee', D:'#f97316', X:'#f87171'};
+const LABELS = {A:'Segura A', B:'Segura B', S:'Sin asignar', D:'Dudoso', X:'Contraejemplo'};
+
+// ═══ SCENE ═══
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const W = window.innerWidth, H = window.innerHeight;
+const camera = new THREE.PerspectiveCamera(55, W/H, 0.05, 500);
+camera.position.set(0, 1.6, 4); // Standing height in VR
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(W, H);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+// ═══ VR BUTTON ═══
+// Inline VRButton (no import needed)
+function createVRButton(renderer) {
+  const btn = document.createElement('button');
+  btn.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999;'+
+    'padding:16px 32px;background:#f97316;color:#000;border:none;border-radius:8px;'+
+    'font-size:16px;font-weight:700;cursor:pointer;font-family:Georgia,serif;letter-spacing:1px';
+  btn.textContent = 'ENTER VR';
+
+  function showEnterVR() {
+    btn.textContent = 'ENTER VR';
+    btn.onclick = async () => {
+      try {
+        const session = await navigator.xr.requestSession('immersive-vr', {
+          optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+        });
+        renderer.xr.setSession(session);
+        btn.textContent = 'EXIT VR';
+        btn.onclick = () => { session.end(); };
+        session.addEventListener('end', showEnterVR);
+      } catch(e) { console.error('VR session failed:', e); }
+    };
+  }
+
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+      if (supported) { showEnterVR(); document.body.appendChild(btn); }
+      else { btn.textContent = 'VR NOT SUPPORTED'; btn.style.background='#475569'; document.body.appendChild(btn); }
+    });
+  } else {
+    btn.textContent = 'WebXR NOT AVAILABLE';
+    btn.style.background = '#475569';
+    document.body.appendChild(btn);
+  }
+  return btn;
+}
+createVRButton(renderer);
+
+// ═══ INFO ═══
+document.getElementById('info').innerHTML =
+  `PCA 3D: ${DATA.ve}% varianza (${DATA.ve1}% + ${DATA.ve2}% + ${DATA.ve3}%)<br>` +
+  `P95=${DATA.p95} · P99=${DATA.p99} · ${DATA.sonnets.length} sonetos`;
+
+const legendEl = document.getElementById('legend');
+for (const [tag, label] of Object.entries(LABELS)) {
+  const count = DATA.sonnets.filter(s => s.tag === tag).length;
+  if (!count) continue;
+  legendEl.innerHTML += `<div><div class="dot" style="background:${COLOR_HEX[tag]}"></div>${label} (${count})</div>`;
+}
+
+// ═══ WORLD GROUP — scaled for room ═══
+// PCA coordinates ~±15. Scale to ~±1.5m around player
+const group = new THREE.Group();
+const sonnets = DATA.sonnets;
+
+let maxR = 0;
+sonnets.forEach(s => { maxR = Math.max(maxR, Math.abs(s.x), Math.abs(s.y), Math.abs(s.z)); });
+const scale = 1.5 / maxR; // 1.5 meters radius
+
+const meshes = [];
+const labelSprites = [];
+
+sonnets.forEach((s, idx) => {
+  const x = s.x * scale, y = s.y * scale + 1.4, z = s.z * scale - 1; // offset Y to eye level, Z in front
+  const color = COLORS[s.tag] || 0xffffff;
+  let geo, mesh;
+
+  if (s.tag === 'D') {
+    geo = new THREE.TetrahedronGeometry(0.035, 0);
+  } else if (s.tag === 'X') {
+    geo = new THREE.OctahedronGeometry(0.03, 0);
+  } else {
+    geo = new THREE.SphereGeometry(s.tag === 'S' ? 0.02 : 0.025, 8, 6);
+  }
+
+  const mat = new THREE.MeshPhongMaterial({
+    color, emissive: color, emissiveIntensity: 0.2,
+    transparent: true, opacity: 0.85
+  });
+  mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  mesh.userData = {idx, sonnet: s};
+  group.add(mesh);
+  meshes.push(mesh);
+
+  // Number label (sprite)
+  const cv = document.createElement('canvas');
+  cv.width = 64; cv.height = 32;
+  const ctx = cv.getContext('2d');
+  ctx.font = 'bold 18px Georgia';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.fillText(String(s.n), 32, 22);
+  const tex = new THREE.CanvasTexture(cv);
+  const spMat = new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.5, depthTest:false});
+  const sprite = new THREE.Sprite(spMat);
+  sprite.position.set(x, y + 0.05, z);
+  sprite.scale.set(0.12, 0.06, 1);
+  group.add(sprite);
+  labelSprites.push(sprite);
+});
+
+scene.add(group);
+
+// ═══ AXES ═══
+const axLen = 1.8;
+[{dir:[1,0,0],c:0xff4444},{dir:[0,1,0],c:0x44ff44},{dir:[0,0,1],c:0x4444ff}].forEach(a => {
+  const pts = [new THREE.Vector3(0,1.4,-1), new THREE.Vector3(a.dir[0]*axLen, a.dir[1]*axLen+1.4, a.dir[2]*axLen-1)];
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({color:a.c, transparent:true, opacity:0.2})));
+});
+
+// ═══ FLOOR GRID ═══
+const gridHelper = new THREE.GridHelper(6, 20, 0x1e293b, 0x0f172a);
+scene.add(gridHelper);
+
+// ═══ LIGHTS ═══
+scene.add(new THREE.AmbientLight(0x444466, 0.6));
+const dLight = new THREE.DirectionalLight(0xffffff, 0.7);
+dLight.position.set(2, 4, 3);
+scene.add(dLight);
+const pLight = new THREE.PointLight(0xf97316, 0.3, 10);
+pLight.position.set(0, 2.5, -1);
+scene.add(pLight);
+
+// Starfield
+const starGeo = new THREE.BufferGeometry();
+const starVerts = [];
+for (let i = 0; i < 500; i++) {
+  starVerts.push((Math.random()-.5)*40, (Math.random()-.5)*40+5, (Math.random()-.5)*40);
+}
+starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:0x334155, size:0.05})));
+
+// ═══ VR CONTROLLER — pointer ray + interaction ═══
+let controller0, controller1;
+let vrRay;
+const vrRayGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,-5)]);
+const vrRayMat = new THREE.LineBasicMaterial({color:0xf97316, transparent:true, opacity:0.4});
+
+// VR info panel (3D text board floating in space)
+const infoBoardCanvas = document.createElement('canvas');
+infoBoardCanvas.width = 512; infoBoardCanvas.height = 256;
+const infoBoardTex = new THREE.CanvasTexture(infoBoardCanvas);
+const infoBoardMat = new THREE.SpriteMaterial({map:infoBoardTex, transparent:true, opacity:0.9, depthTest:false});
+const infoBoard = new THREE.Sprite(infoBoardMat);
+infoBoard.scale.set(0.8, 0.4, 1);
+infoBoard.position.set(0, 2.2, -1.5);
+infoBoard.visible = false;
+scene.add(infoBoard);
+
+function updateInfoBoard(s) {
+  const ctx = infoBoardCanvas.getContext('2d');
+  ctx.clearRect(0, 0, 512, 256);
+  ctx.fillStyle = 'rgba(15,23,42,0.9)';
+  ctx.roundRect(0, 0, 512, 256, 12);
+  ctx.fill();
+  ctx.strokeStyle = COLOR_HEX[s.tag];
+  ctx.lineWidth = 3;
+  ctx.roundRect(0, 0, 512, 256, 12);
+  ctx.stroke();
+
+  ctx.font = 'bold 28px Georgia';
+  ctx.fillStyle = COLOR_HEX[s.tag];
+  ctx.fillText(`#${s.n} [${s.tag}]`, 20, 40);
+
+  ctx.font = 'italic 20px Georgia';
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillText(s.inc, 20, 75);
+
+  ctx.font = '18px Georgia';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText(`d(A+B+S) = ${s.d}`, 20, 115);
+
+  const vc = s.v === 'COMPATIBLE' ? '#4ade80' : (s.v === 'MUY ATÍPICO' ? '#f87171' : '#fb923c');
+  ctx.fillStyle = vc;
+  ctx.font = 'bold 22px Georgia';
+  ctx.fillText(s.v, 20, 150);
+
+  ctx.fillStyle = '#64748b';
+  ctx.font = '16px Georgia';
+  ctx.fillText(`End: ${s.ne}/14 · PC1=${s.x.toFixed(1)} PC2=${s.y.toFixed(1)} PC3=${s.z.toFixed(1)}`, 20, 190);
+
+  infoBoardTex.needsUpdate = true;
+  infoBoard.visible = true;
+}
+
+function setupControllers() {
+  controller0 = renderer.xr.getController(0);
+  controller0.addEventListener('connected', e => {
+    vrRay = new THREE.Line(vrRayGeo.clone(), vrRayMat.clone());
+    controller0.add(vrRay);
+  });
+  scene.add(controller0);
+
+  controller1 = renderer.xr.getController(1);
+  scene.add(controller1);
+}
+setupControllers();
+
+// ═══ DESKTOP CONTROLS ═══
+let isDragging = false, prevX = 0, prevY = 0;
+let rotX = 0, rotY = 0, camDist = 5;
+
+renderer.domElement.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('mousemove', e => {
+  if (isDragging) {
+    rotY += (e.clientX - prevX) * 0.005;
+    rotX += (e.clientY - prevY) * 0.005;
+    rotX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotX));
+    prevX = e.clientX; prevY = e.clientY;
+  }
+  // Tooltip (desktop only, not in VR)
+  if (!renderer.xr.isPresenting) {
+    const mouse = new THREE.Vector2((e.clientX/W)*2-1, -(e.clientY/H)*2+1);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(mouse, camera);
+    const hits = ray.intersectObjects(meshes);
+    const ttEl = document.getElementById('tooltip');
+    if (hits.length > 0) {
+      const s = hits[0].object.userData.sonnet;
+      const vc = s.v === 'COMPATIBLE' ? 'v-comp' : (s.v === 'MUY ATÍPICO' ? 'v-muy' : 'v-atip');
+      const autorStr = s.autor ? `<br><span style="color:#94a3b8">${s.autor}</span>` : '';
+      ttEl.innerHTML =
+        `<span class="num">#${s.n}</span> <span style="color:${COLOR_HEX[s.tag]}">[${s.tag}]</span>${autorStr}` +
+        `<div class="inc">${s.inc}</div>` +
+        `<div style="font-size:11px;margin-top:4px">d(A+B+S) = <b>${s.d}</b> <span class="${vc}" style="font-weight:700;margin-left:6px">${s.v}</span></div>`;
+      ttEl.style.display = 'block';
+      ttEl.style.left = (e.clientX + 16) + 'px';
+      ttEl.style.top = (e.clientY - 10) + 'px';
+      hits[0].object.material.emissiveIntensity = 0.7;
+    } else {
+      ttEl.style.display = 'none';
+      meshes.forEach(m => m.material.emissiveIntensity = 0.2);
+    }
+  }
+});
+
+renderer.domElement.addEventListener('touchstart', e => { isDragging = true; prevX = e.touches[0].clientX; prevY = e.touches[0].clientY; });
+renderer.domElement.addEventListener('touchend', () => isDragging = false);
+renderer.domElement.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  rotY += (e.touches[0].clientX - prevX) * 0.005;
+  rotX += (e.touches[0].clientY - prevY) * 0.005;
+  rotX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotX));
+  prevX = e.touches[0].clientX; prevY = e.touches[0].clientY;
+  e.preventDefault();
+}, {passive:false});
+
+window.addEventListener('wheel', e => {
+  camDist += e.deltaY * 0.005;
+  camDist = Math.max(1, Math.min(15, camDist));
+});
+
+// ═══ VR RAYCASTER ═══
+const vrRaycaster = new THREE.Raycaster();
+const tempMatrix = new THREE.Matrix4();
+let lastVRHit = null;
+
+function vrInteraction() {
+  if (!controller0) return;
+  tempMatrix.identity().extractRotation(controller0.matrixWorld);
+  vrRaycaster.ray.origin.setFromMatrixPosition(controller0.matrixWorld);
+  vrRaycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+  const hits = vrRaycaster.intersectObjects(meshes);
+  if (hits.length > 0) {
+    const s = hits[0].object.userData.sonnet;
+    if (lastVRHit !== hits[0].object) {
+      // Restore previous
+      if (lastVRHit) lastVRHit.material.emissiveIntensity = 0.2;
+      lastVRHit = hits[0].object;
+      hits[0].object.material.emissiveIntensity = 0.8;
+      hits[0].object.scale.set(2, 2, 2);
+      // Update info board
+      updateInfoBoard(s);
+      // Position board near the hit point
+      infoBoard.position.copy(hits[0].point);
+      infoBoard.position.y += 0.15;
+    }
+    // Ray shorter
+    if (vrRay) {
+      vrRay.geometry.dispose();
+      vrRay.geometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0,0,0),
+        new THREE.Vector3(0,0,-hits[0].distance)
+      ]);
+    }
+  } else {
+    if (lastVRHit) {
+      lastVRHit.material.emissiveIntensity = 0.2;
+      lastVRHit.scale.set(1, 1, 1);
+      lastVRHit = null;
+      infoBoard.visible = false;
+    }
+    if (vrRay) {
+      vrRay.geometry.dispose();
+      vrRay.geometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,-5)
+      ]);
+    }
+  }
+}
+
+// ═══ SLOW ROTATION for the whole group (gentle drift) ═══
+let autoRotAngle = 0;
+
+// ═══ RENDER LOOP ═══
+renderer.setAnimationLoop(function() {
+  // VR interaction
+  if (renderer.xr.isPresenting) {
+    vrInteraction();
+    // Gentle rotation of the data cloud
+    autoRotAngle += 0.0008;
+    group.rotation.y = autoRotAngle;
+  } else {
+    // Desktop orbit
+    autoRotAngle += 0.002;
+    if (!isDragging) rotY = autoRotAngle;
+    const cx = Math.sin(rotY) * Math.cos(rotX) * camDist;
+    const cy = Math.sin(rotX) * camDist + 1.6;
+    const cz = Math.cos(rotY) * Math.cos(rotX) * camDist;
+    camera.position.set(cx, cy, cz);
+    camera.lookAt(0, 1.4, -1);
+  }
+
+  renderer.render(scene, camera);
+});
+
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script></body></html>**
